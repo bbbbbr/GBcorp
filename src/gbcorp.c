@@ -16,7 +16,7 @@
 	
 */
 
-// INCLUDE GBDK FUNCTION LIBRARY														
+// INCLUDE GBDK FUNCTION LIBRARY
 #include <gbdk/platform.h> // includes gb.h, sgb.h, cgb.h
 // INCLUDE HANDY HARDWARE REFERENCES
 #include <gb/hardware.h>
@@ -45,8 +45,14 @@ extern const unsigned char * song_Data[];
 
 //The font used is GBDK default one, loaded and colorized by using the functions in <gb/font.h>
 
-
-
+#define MODEL_EMPTY 0
+#define MODEL_DMG   1
+#define MODEL_MGB   2
+#define MODEL_CGB   3
+#define MODEL_SGB   4
+#define MODEL_GBA   5
+#define MODEL_MIN MODEL_DMG
+#define MODEL_MAX MODEL_GBA
 
 //==========================================
 //==========  VARIABLES & HEADERS ============
@@ -112,7 +118,7 @@ typedef struct savegame {
 	UINT32 sram_check;   //check if the SRAM contains a savegame or not (if yes, contains the value of the "SRAM_CHECK" constant, else it will contains anything else)
 	UINT8 model;   //previous GB model we were running on (0: uninitialized / 1: DMG / 2: MGB / 3: GBC / 4: SGB)
 	UINT32 score;   //the current player score
-	UINT8 type[64];   //The current type of each foe (0: empty / 1: DMG / 2: MGB / 3: GBC / 4: SGB)
+	UINT8 type[64];   //The current type of each foe (0: empty / 1: DMG / 2: MGB / 3: GBC / 4: SGB / 5: GBA)
 	UINT8 power[64];   //The current power for each foe
 	UINT16 powerUP[64];   //The current price to refill power for each foe
 	UINT8 level[64];   //The current xp level for each foe
@@ -356,7 +362,7 @@ void main(){
 		
 		
 		//If a foe is currently active in the slot
-		if( save.type[save.foeIndex] != 0 ){
+		if( save.type[save.foeIndex] != MODEL_EMPTY ){
 		
 			//Pressing A : Recharge batteries
 			if (pad & J_A){
@@ -540,7 +546,7 @@ void main(){
 					save.score -= save.hireCost;
 				
 					//Fire the current foe
-					save.type[save.foeIndex]=0; 
+					save.type[save.foeIndex] = MODEL_EMPTY;
 					//Reset all the other vars too for future slot use
 					save.power[save.foeIndex]=0; 
 					save.powerUP[save.foeIndex]=1; 
@@ -608,7 +614,8 @@ void main(){
 					}
 					//Else, truly random model selection among all the available models (including the current one)
 					else {
-						save.type[save.foeIndex]=1+(rand()&3); 
+						// save.type[save.foeIndex]=1+(rand()&3);
+						save.type[save.foeIndex] = ((unsigned char)rand() % (MODEL_MAX - MODEL_MIN + 1)) + MODEL_MIN;
 					}
 					
 					//Set his power to the max (even if it can't run now because it's not the right model)
@@ -624,10 +631,10 @@ void main(){
 					l=((j >> 3) << 2);
 					
 					//If the foe is a DMG model
-					if( save.type[j] == 1 ){
+					if( save.type[j] == MODEL_DMG ){
 						
 						//Is this model currently running?
-						if( save.model == 1 ){
+						if( save.model == MODEL_DMG ){
 							//Draw the foe tilemap on the foe coordinates
 							set_bkg_tiles( k, l, 4, 4, map_dmg_on);
 						}
@@ -638,10 +645,10 @@ void main(){
 						}
 					}
 					//else if the foe is a MGB model
-					else if( save.type[j] == 2 ){
+					else if( save.type[j] == MODEL_MGB ){
 						
 						//Is this model currently running?
-						if( save.model == 2 ){
+						if( save.model == MODEL_MGB ){
 							//Draw the foe tilemap on the foe coordinates
 							set_bkg_tiles( k, l, 4, 4, map_mgb_on);
 						}
@@ -652,10 +659,10 @@ void main(){
 						}
 					}
 					//else if the foe is a CGB model
-					else if( save.type[j] == 3 ){
+					else if( save.type[j] == MODEL_CGB ){
 						
 						//Is this model currently running?
-						if( save.model == 3 ){
+						if( save.model == MODEL_CGB ){
 							//Draw the foe tilemap on the foe coordinates
 							set_bkg_tiles( k, l, 4, 4, map_cgb_on);
 						}
@@ -666,10 +673,10 @@ void main(){
 						}
 					}
 					//else if the foe is a SGB model
-					else if( save.type[j] == 4 ){
+					else if( save.type[j] == MODEL_SGB ){
 						
 						//Is this model currently running?
-						if( save.model == 4 ){
+						if( save.model == MODEL_SGB ){
 							//Draw the foe tilemap on the foe coordinates
 							set_bkg_tiles( k, l, 4, 4, map_sgb_on);
 						}
@@ -677,6 +684,20 @@ void main(){
 						else {
 							//Draw the foe tilemap on the foe coordinates
 							set_bkg_tiles( k, l, 4, 4, map_sgb_off);
+						}
+					}
+					//else if the foe is a GBA model
+					else if( save.type[j] == MODEL_GBA ){
+						
+						//Is this model currently running?
+						if( save.model == MODEL_GBA ){
+							//Draw the foe tilemap on the foe coordinates
+							set_bkg_tiles( k, l, 4, 4, map_gba_on);
+						}
+						//Else, draw the "sleeping" version
+						else {
+							//Draw the foe tilemap on the foe coordinates
+							set_bkg_tiles( k, l, 4, 4, map_gba_off);
 						}
 					}
 					
@@ -916,7 +937,7 @@ void initGame(){
 	if ( sgb_check() != NULL ){
 		
 		//Record the current model in a local var for now
-		model=4;
+		model = MODEL_SGB;
 	}
 	//Else, not running on a SGB
 	else {
@@ -924,19 +945,26 @@ void initGame(){
 		if( _cpu == DMG_TYPE ){
 			
 			//Record the current model in a local var for now
-			model=1;
+			model = MODEL_DMG;
 		} 
 		//MGB model (Pocket)
 		else if( _cpu == MGB_TYPE ){
 			
 			//Record the current model in a local var for now
-			model=2;
+			model = MODEL_MGB;
 		}
 		//CGB model (Color)
 		else if( _cpu == CGB_TYPE ){
-			
-			//Record the current model in a local var for now
-			model=3;
+		
+			// GBA model (AGB/AGS Game Boy Advance, Game Boy Advance SP)
+			if (_is_GBA == GBA_DETECTED) {
+				//Record the current model in a local var for now
+				model = MODEL_GBA;
+			}
+			else {
+				//Record the current model in a local var for now
+				model = MODEL_CGB;
+			}
 			
 			//Enable default grayscale palette when running on CGB (so we don't get rendered by the ugly red/green default palettes)
 			cgb_compatibility();
@@ -955,14 +983,14 @@ void initGame(){
 		save.sram_check = SRAM_CHECK;
 		
 		//Reset the GB model (it'll be stored right after that section)
-		save.model = 0;
+		save.model = MODEL_EMPTY;
 		
 		//Reset the score
 		save.score = 0;
 		
 		//Reset the foes values (type, energy and level all set to base values)
 		for( i=0 ; i < 64 ; ++i){
-			save.type[i]=0; 
+			save.type[i] = MODEL_EMPTY;
 			save.power[i]=0; 
 			save.powerUP[i]=1; 
 			save.level[i]=1; 
@@ -1026,7 +1054,7 @@ void initGame(){
 	DISPLAY_OFF; //turns off the display again as the font function will enable it automatically
 	
 	//Send all the background / window tile data (graphics assets) into VRAM
-	set_bkg_data(0x80, 90, tiles_data);
+	set_bkg_data(0x80, BKG_DATA_TILE_COUNT, tiles_data);
 	
 	//Then call the function that will build the BG using the SRAM data and the tiles above (enable SRAM access just for this, as we'll need values from SRAM)
 	ENABLE_RAM_MBC5;
@@ -1349,10 +1377,10 @@ void buildBG(){
 		l=(i >> 3) << 2;
 		
 		//If the foe is a DMG model
-		if( save.type[i] == 1 ){
+		if( save.type[i] == MODEL_DMG ){
 			
 			//Is this model currently running?
-			if( save.model == 1 ){
+			if( save.model == MODEL_DMG ){
 				
 				//Draw the foe tilemap on the foe coordinates
 				set_bkg_tiles( k, l, 4, 4, map_dmg_on);
@@ -1375,10 +1403,10 @@ void buildBG(){
 			}
 		}
 		//else if the foe is a MGB model
-		else if( save.type[i] == 2 ){
+		else if( save.type[i] == MODEL_MGB ){
 			
 			//Is this model currently running?
-			if( save.model == 2 ){
+			if( save.model == MODEL_MGB ){
 				//Draw the foe tilemap on the foe coordinates
 				set_bkg_tiles( k, l, 4, 4, map_mgb_on);
 				
@@ -1400,10 +1428,10 @@ void buildBG(){
 			}
 		}
 		//else if the foe is a CGB model
-		else if( save.type[i] == 3 ){
+		else if( save.type[i] == MODEL_CGB ){
 			
 			//Is this model currently running?
-			if( save.model == 3 ){
+			if( save.model == MODEL_CGB ){
 				//Draw the foe tilemap on the foe coordinates
 				set_bkg_tiles( k, l, 4, 4, map_cgb_on);
 				
@@ -1425,10 +1453,10 @@ void buildBG(){
 			}
 		}
 		//else if the foe is a SGB model
-		else if( save.type[i] == 4 ){
+		else if( save.type[i] == MODEL_SGB ){
 			
 			//Is this model currently running?
-			if( save.model == 4 ){
+			if( save.model == MODEL_SGB ){
 				//Draw the foe tilemap on the foe coordinates
 				set_bkg_tiles( k, l, 4, 4, map_sgb_on);
 				
@@ -1447,6 +1475,31 @@ void buildBG(){
 			else {
 				//Draw the foe tilemap on the foe coordinates
 				set_bkg_tiles( k, l, 4, 4, map_sgb_off);
+			}
+		}
+		//else if the foe is a SGB model
+		else if( save.type[i] == MODEL_GBA ){
+			
+			//Is this model currently running?
+			if( save.model == MODEL_GBA ){
+				//Draw the foe tilemap on the foe coordinates
+				set_bkg_tiles( k, l, 4, 4, map_gba_on);
+				
+				//If the foe is out of energy, disable the "hands working" animation by replacing part of the tilemap (both hands)
+				if( save.power[i] == 0 ){
+					//Replace the "hands" tile in the foe tilemap so they no longer move!
+					//Left hand
+					set_bkg_tile_xy( k, l+1, 0xB1);
+					set_bkg_tile_xy( k, l+2, 0xB2);
+					//Right hand
+					set_bkg_tile_xy( k+3, l+1, 0xB3);
+					set_bkg_tile_xy( k+3, l+2, 0xB4);
+				}
+			}
+			//Else, draw the "sleeping" version
+			else {
+				//Draw the foe tilemap on the foe coordinates
+				set_bkg_tiles( k, l, 4, 4, map_gba_off);
 			}
 		}
 		//Else, the cubicle is empty!
