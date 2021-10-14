@@ -17,7 +17,7 @@
 */
 
 // INCLUDE GBDK FUNCTION LIBRARY														
-#include <gb/gb.h>
+#include <gbdk/platform.h> // includes gb.h, sgb.h, cgb.h
 // INCLUDE HANDY HARDWARE REFERENCES
 #include <gb/hardware.h>
 // INCLUDE RANDOM FUNCTIONS
@@ -26,11 +26,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <gb/font.h>
+#include <gbdk/font.h>
 #include <gb/drawing.h>
-#include <gb/console.h>
-#include <gb/sgb.h>
-#include <gb/cgb.h>
+#include <gbdk/console.h>
+
 
 //INCLUDE MUSIC PLAYER (GBT Player by AntonioND)
 #include "gbt_player.h"
@@ -42,7 +41,7 @@ extern const unsigned char * song_Data[];
 //================================
 
 //Import all graphics assets from external file
-#include "assets.c"
+#include "assets.h"
 
 //The font used is GBDK default one, loaded and colorized by using the functions in <gb/font.h>
 
@@ -389,7 +388,7 @@ void main(){
 					//For the GUI, update the POWER number only (optimization!) instead of the full GUI, as the other elements aren't modified here, and the CPU usage is already heavy due to the BG tilemap modification
 					
 					//Convert the foe power to an ASCII string
-					utoa( save.power[save.foeIndex], txt_buffer);
+					uitoa( save.power[save.foeIndex], txt_buffer, 10);
 					
 					//Compute its length before messing with it
 					l=strlen(txt_buffer);
@@ -417,7 +416,7 @@ void main(){
 					l=l+12;
 					
 					//Convert the number to an ASCII string
-					utoa(save.powerUP[save.foeIndex], txt_buffer);
+					uitoa(save.powerUP[save.foeIndex], txt_buffer, 10);
 					
 					//Compute its length (before messing with it!)
 					j=strlen(txt_buffer);
@@ -764,7 +763,7 @@ void main(){
 					if( save.foeIndex == j ){
 					
 						//Convert the foe power to an ASCII string
-						utoa( save.power[save.foeIndex], txt_buffer);
+						uitoa( save.power[save.foeIndex], txt_buffer, 10);
 						
 						//Compute its length before messing with it
 						l=strlen(txt_buffer);
@@ -809,7 +808,7 @@ void main(){
 		//======= SCORE DISPLAY =========
 		
 		//Convert the 32 unsigned integer score value to a string to display it (the sprintf function cannot handle more than 16 bit value here)
-		ultoa(save.score, txt_score);
+		ultoa(save.score, txt_score, 10);
 		
 		//Retrieve the score string length (used for accurate positioning)
 		j=strlen(txt_score);
@@ -1177,7 +1176,7 @@ void refreshGUI(){
 			//Display foe power
 			
 			//Convert the number to an ASCII string
-			utoa(save.power[save.foeIndex], txt_buffer);
+			uitoa(save.power[save.foeIndex], txt_buffer, 10);
 			
 			//Compute its length (before messing with it!)
 			j=strlen(txt_buffer);
@@ -1206,7 +1205,7 @@ void refreshGUI(){
 			l=j+12;
 			
 			//Convert the number to an ASCII string
-			utoa(save.powerUP[save.foeIndex], txt_buffer);
+			uitoa(save.powerUP[save.foeIndex], txt_buffer, 10);
 			
 			//Compute its length (before messing with it!)
 			j=strlen(txt_buffer);
@@ -1235,7 +1234,7 @@ void refreshGUI(){
 		//Display foe level
 		
 		//Convert the number to an ASCII string
-		utoa(save.level[save.foeIndex], txt_buffer);
+		uitoa(save.level[save.foeIndex], txt_buffer, 10);
 		
 		//Compute its length (before messing with it!)
 		j=strlen(txt_buffer);
@@ -1261,7 +1260,7 @@ void refreshGUI(){
 		l=j+11;
 		
 		//Convert the number to an ASCII string
-		utoa(save.levelUP[save.foeIndex], txt_buffer);
+		uitoa(save.levelUP[save.foeIndex], txt_buffer, 10);
 		
 		//Compute its length (before messing with it!)
 		j=strlen(txt_buffer);
@@ -1285,7 +1284,7 @@ void refreshGUI(){
 		//Display firing price (same as hiring one)
 		
 		//Convert the number to an ASCII string
-		utoa(save.hireCost, txt_buffer);
+		uitoa(save.hireCost, txt_buffer, 10);
 		
 		//Compute its length (before messing with it!)
 		j=strlen(txt_buffer);
@@ -1315,7 +1314,7 @@ void refreshGUI(){
 		//Display hiring price 
 		
 		//Convert the number to an ASCII string
-		utoa(save.hireCost, txt_buffer);
+		uitoa(save.hireCost, txt_buffer, 10);
 		
 		//Compute its length (before messing with it!)
 		j=strlen(txt_buffer);
