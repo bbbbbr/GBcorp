@@ -15,7 +15,7 @@ extern const unsigned char tiles_sprites[];
 //Background tiles
 extern const unsigned char tiles_data[];
 
-#define BKG_DATA_TILE_COUNT (90 + 12)
+#define BKG_DATA_TILE_COUNT (90 + 12 + 2)
 
 //Background animation: working (both hands pushing buttons)
 extern const unsigned char tiles_working0[];
@@ -61,3 +61,6 @@ extern const unsigned char map_gba_off[];
 
 //Foe: GBA Working
 extern const unsigned char map_gba_on[];
+
+// Serial link buddy map
+extern const unsigned char map_linked_buddy[7][5];
