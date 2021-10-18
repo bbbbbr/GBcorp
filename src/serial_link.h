@@ -32,7 +32,7 @@
     if ((SC_REG & LINK_SENDING_MASK) != LINK_SENDING_ACTIVE) {\
         SC_REG = LINK_CLOCK_INT; \
         SB_REG = (byte); \
-        SC_REG = (LINK_XFER_START | LINK_CLOCK_INT | LINK_SPEED_FAST); \
+        SC_REG = (LINK_XFER_START | LINK_CLOCK_INT); \
     }
 
 
@@ -44,7 +44,7 @@
 	while ((SC_REG & LINK_SENDING_MASK) == LINK_SENDING_ACTIVE); \
     SC_REG = LINK_CLOCK_EXT; \
     SB_REG = TX_DATA; \
-    SC_REG = (LINK_XFER_START | LINK_CLOCK_EXT | LINK_SPEED_FAST);
+    SC_REG = (LINK_XFER_START | LINK_CLOCK_EXT);
 
 
 bool link_update(uint8_t model_this_gb, uint8_t * p_model_recv);
