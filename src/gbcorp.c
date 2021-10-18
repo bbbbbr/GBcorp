@@ -78,7 +78,7 @@ UINT8 reset_save;
 UINT8 pad; //current player actions (holds the value of the pressed/released state for all the buttons)
 UINT8 padOld; //previous player actions state (used to detect new keypresses only once)
 UINT8 model; //current model we are running on (used in detection code, can be different from the value saved in SRAM at startup!)
-uint8_t model_linked; // 2 player serial linked model, if applicable
+uint8_t model_linked_bits; // 2+ player serial linked models, if applicable (bit-packed, 1 bit per model)
 UINT8 txt_score[10]; //The string that will be used to display the score (as it's a long (usigned 32 bits), it's not possible to use sprintf directly here)
 UINT8 txt_buffer[20]; //The string buffer that will be used to display various stuffs (printf target BKG only, but we want to draw on the WINDOW using sprintf instead)
 UINT8 foeIndexOld; //Store the previous foe Index, to refresh only after a change (as it's a costly operation in CPU time with all those 16 bits numbers to display)
@@ -283,7 +283,7 @@ void main(){
 		gbt_update(); // This will change to ROM bank 1.
 
 		// Update serial link
-		if (link_update(model, &(model_linked))) {
+		if (link_update(model, &(model_linked_bits))) {
 
 			// If a state change occurred, update the display
 
@@ -292,8 +292,21 @@ void main(){
 			buildBG();
 			DISABLE_RAM_MBC5;
 
-			// Display connected GB model at the bottom of the status area
-			set_win_tiles(0, 5, 5, 1, &(map_linked_buddy[model_linked][0]) );
+			// Display link icon if active, otherwise hide it
+            if (model_linked_bits)
+                set_win_tiles(0, 5, 3, 1, &(map_linked_icon[LINK_ICON_ON][0]) );
+            else
+                set_win_tiles(0, 5, 3, 1, &(map_linked_icon[LINK_ICON_OFF][0]) );
+
+            uint8_t icon, icon_x = 3;
+            // Display connected GB models at the bottom of the status area
+            for (icon = MODEL_MIN; icon <= MODEL_MAX; icon++) {
+                if (model_bits_map[icon] & model_linked_bits)
+			         set_win_tiles(icon_x, 5, 2, 1, &(map_linked_model[icon][0]) );
+                else
+                     set_win_tiles(icon_x, 5, 2, 1, &(map_linked_model[MODEL_EMPTY][0]) );
+                icon_x += 3;
+            }
 		}
 
 
@@ -381,7 +394,7 @@ void main(){
 
 				//If we have enough money left and if the foe is currently active (via user GB or Linked GB)
 				if (((save.type[save.foeIndex] == save.model) ||
-					 (save.type[save.foeIndex] == model_linked)) &&
+					 (model_bits_map[save.type[save.foeIndex]] & model_linked_bits)) &&
 					 (save.score > save.powerUP[save.foeIndex]) ) {
 
 					//Restore the power on the Foe
@@ -649,7 +662,7 @@ void main(){
 
 						//Is this model currently running?
 						if ((save.model == MODEL_DMG) ||
-						    (model_linked == MODEL_DMG)) {
+						    (model_linked_bits & MODEL_DMG_BITS)) {
 							//Draw the foe tilemap on the foe coordinates
 							set_bkg_tiles( k, l, 4, 4, map_dmg_on);
 						}
@@ -664,7 +677,7 @@ void main(){
 
 						//Is this model currently running?
 						if ((save.model == MODEL_MGB) ||
-						    (model_linked == MODEL_MGB)) {
+						    (model_linked_bits & MODEL_MGB_BITS)) {
 							//Draw the foe tilemap on the foe coordinates
 							set_bkg_tiles( k, l, 4, 4, map_mgb_on);
 						}
@@ -679,7 +692,7 @@ void main(){
 
 						//Is this model currently running?
 						if ((save.model == MODEL_CGB) ||
-						    (model_linked == MODEL_CGB)) {
+						    (model_linked_bits & MODEL_CGB_BITS)) {
 							//Draw the foe tilemap on the foe coordinates
 							set_bkg_tiles( k, l, 4, 4, map_cgb_on);
 						}
@@ -694,7 +707,7 @@ void main(){
 
 						//Is this model currently running?
 						if ((save.model == MODEL_SGB) ||
-						    (model_linked == MODEL_SGB)) {
+						    (model_linked_bits & MODEL_SGB_BITS)) {
 							//Draw the foe tilemap on the foe coordinates
 							set_bkg_tiles( k, l, 4, 4, map_sgb_on);
 						}
@@ -709,7 +722,7 @@ void main(){
 
 						//Is this model currently running?
 						if ((save.model == MODEL_GBA) ||
-						    (model_linked == MODEL_GBA)) {
+						    (model_linked_bits & MODEL_GBA_BITS)) {
 							//Draw the foe tilemap on the foe coordinates
 							set_bkg_tiles( k, l, 4, 4, map_gba_on);
 						}
@@ -778,7 +791,7 @@ void main(){
 
 			//If the foe is of the current model we are running on
 			if ((save.type[j] == save.model) ||
-			    (save.type[j] == model_linked)) {
+			    (model_bits_map[save.type[j]] & model_linked_bits)) {
 
 				//If the current foe have some power left
 				if( save.power[j] > 0 ){
@@ -997,9 +1010,7 @@ void initGame(){
 	//Init the SRAM if it's the first game run (i.e no save file found)
 
 	// Serial Linked model always resets to disconnected on startup, regardless of save data
-	// Use MODEL_DISCONNECTED instead of MODEL_EMPTY to ensure
-	// there aren't accidental matches in the disconnected state.
-	model_linked = MODEL_DISCONNECTED;
+	model_linked_bits = MODEL_EMPTY_BITS;
 
 	//If the SRAM doesn't contains the "magic key", we "reset / init" it to have a clear and controlled startup state
 	if( save.sram_check != SRAM_CHECK ){
@@ -1225,7 +1236,7 @@ void refreshGUI(){
 
 		//If the foe is currently active ?
 		if ((save.type[save.foeIndex] == save.model) ||
-		    (save.type[save.foeIndex] == model_linked)) {
+		    (save.type[save.foeIndex] == model_linked_bits)) {
 
 			//Display power static string
 			set_win_tiles(2, 2, 5, 1, msg_power);
@@ -1410,7 +1421,7 @@ void buildBG(){
 
 			//Is this model currently running?
 			if ((save.model == MODEL_DMG) ||
-			    (model_linked == MODEL_DMG)) {
+			    (model_linked_bits & MODEL_DMG_BITS)) {
 
 				//Draw the foe tilemap on the foe coordinates
 				set_bkg_tiles( k, l, 4, 4, map_dmg_on);
@@ -1437,7 +1448,7 @@ void buildBG(){
 
 			//Is this model currently running?
 			if ((save.model == MODEL_MGB) ||
-			    (model_linked == MODEL_MGB)) {
+			    (model_linked_bits & MODEL_MGB_BITS)) {
 				//Draw the foe tilemap on the foe coordinates
 				set_bkg_tiles( k, l, 4, 4, map_mgb_on);
 
@@ -1463,7 +1474,7 @@ void buildBG(){
 
 			//Is this model currently running?
 			if ((save.model == MODEL_CGB) ||
-			    (model_linked == MODEL_CGB)) {
+			    (model_linked_bits & MODEL_CGB_BITS)) {
 				//Draw the foe tilemap on the foe coordinates
 				set_bkg_tiles( k, l, 4, 4, map_cgb_on);
 
@@ -1489,7 +1500,7 @@ void buildBG(){
 
 			//Is this model currently running?
 			if ((save.model == MODEL_SGB) ||
-			    (model_linked == MODEL_SGB)) {
+			    (model_linked_bits & MODEL_SGB_BITS)) {
 				//Draw the foe tilemap on the foe coordinates
 				set_bkg_tiles( k, l, 4, 4, map_sgb_on);
 
@@ -1515,7 +1526,7 @@ void buildBG(){
 
 			//Is this model currently running?
 			if ((save.model == MODEL_GBA) ||
-			    (model_linked == MODEL_GBA)) {
+			    (model_linked_bits & MODEL_GBA_BITS)) {
 				//Draw the foe tilemap on the foe coordinates
 				set_bkg_tiles( k, l, 4, 4, map_gba_on);
 

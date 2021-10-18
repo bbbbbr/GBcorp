@@ -23,17 +23,24 @@
 #define LINK_DATA_IDLE  0x00u      // Placeholder data for serial send reg when idle
 
 static uint8_t link_send_counter = LINK_SEND_INTERVAL;
-static uint8_t link_recv_timeout = LINK_RECV_TIME_EXPIRED;
+static uint8_t link_recv_timeout[MODEL_COUNT];
 
 static bool link_recv_newdata = false;
 
 
-// Default to no linked player
-// Use MODEL_DISCONNECTED instead of MODEL_EMPTY to ensure
-// there aren't accidental matches in the disconnected state.
-static uint8_t link_recv_data_prev    = MODEL_DISCONNECTED;
-static uint8_t link_recv_data_current = MODEL_DISCONNECTED;
+// Default to no linked players
+static uint8_t link_recv_data_prev    = MODEL_EMPTY; // bit-packed
+static uint8_t link_recv_data_current = MODEL_EMPTY; // bit-packed
+static uint8_t link_recv_data_new_id  = MODEL_EMPTY;
 
+const uint8_t model_bits_map[MODEL_COUNT] = {
+    MODEL_EMPTY_BITS,
+    MODEL_DMG_BITS,
+    MODEL_MGB_BITS,
+    MODEL_CGB_BITS,
+    MODEL_SGB_BITS,
+    MODEL_GBA_BITS
+};
 
 
 // * Periodic send out of data
@@ -44,6 +51,7 @@ static uint8_t link_recv_data_current = MODEL_DISCONNECTED;
 bool link_update(uint8_t model_to_send, uint8_t * p_model_recv) {
 
     bool state_changed = false;
+    uint8_t model;
 
     // ==== HANDLE TRANSMITTING DATA ====
 
@@ -66,7 +74,7 @@ bool link_update(uint8_t model_to_send, uint8_t * p_model_recv) {
     __critical {
         if (link_recv_newdata == true) {
             // Reset expiration for received data
-            link_recv_timeout = LINK_RECV_TIME_RESTART;
+            link_recv_timeout[link_recv_data_new_id]  = LINK_RECV_TIME_RESTART;
             link_recv_newdata = false;
 
             // Check if model type changed
@@ -77,15 +85,21 @@ bool link_update(uint8_t model_to_send, uint8_t * p_model_recv) {
         }
     }
 
-    // Update timeout of received link data
-    if (link_recv_timeout) {
-        link_recv_timeout--;
+    for (model = MODEL_MIN; model <= MODEL_MAX; model++) {
+        // Update timeout of received link data
+        if (link_recv_timeout[model]) {
+            link_recv_timeout[model]--;
 
-        // Link expired, reset received data
-        if (link_recv_timeout == LINK_RECV_TIME_EXPIRED) {
-            link_recv_data_current = MODEL_DISCONNECTED;
-            link_recv_data_prev    = MODEL_DISCONNECTED;
-            state_changed = true;
+            // Link expired, reset received data
+            if (link_recv_timeout[model] == LINK_RECV_TIME_EXPIRED) {
+
+                // Clear expired models bit out set
+                link_recv_data_current &= ~model_bits_map[model];
+
+                // set previous to same to avoid triggering another update next frame
+                link_recv_data_prev    = link_recv_data_current;
+                state_changed = true;
+            }
         }
     }
 
@@ -123,7 +137,8 @@ void link_serial_isr() __critical __interrupt {
             // * Test data bits against upshifted and xored copy of them
             if ((link_data & LINK_DATA_CHK_MASK) == (link_data_bits ^ LINK_DATA_MASK) << LINK_CHK_DATA_UPSHIFT) {
                 // data looks ok, make a copy to global var
-                link_recv_data_current = link_data_bits;
+                link_recv_data_current |= model_bits_map[link_data_bits]; // On in new model in bit-packed form
+                link_recv_data_new_id  = link_data_bits; // Store raw, non-bitpacked ID as well
                 link_recv_newdata = true;
             }
         }
@@ -144,6 +159,11 @@ void link_init(void) {
 
 
 void link_reset(void) {
+
+    uint8_t model;
+
+    for (model = MODEL_MIN; model <= MODEL_MAX; model++)
+        link_recv_timeout[model] = LINK_RECV_TIME_EXPIRED;
 
 	// Default to receiver mode
 	LINK_WAIT_RECEIVE_WHEN_READY(LINK_DATA_IDLE); // Placeholder byte

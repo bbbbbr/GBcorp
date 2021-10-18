@@ -62,5 +62,9 @@ extern const unsigned char map_gba_off[];
 //Foe: GBA Working
 extern const unsigned char map_gba_on[];
 
+#define LINK_ICON_ON  0
+#define LINK_ICON_OFF 1
+
 // Serial link buddy map
-extern const unsigned char map_linked_buddy[7][5];
+extern const unsigned char map_linked_icon[2][2];
+extern const unsigned char map_linked_model[7][2];
