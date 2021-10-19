@@ -1,3 +1,8 @@
+#### This is a small fork that adds some extras for **Dr. Ludos's** [GB Corp](drludos/GBcorp)
+* 2-Player Link support
+* GBA in CGB mode detection and cubicle model
+----------
+
 # GB Corp.
 
 A Game Boy game for the [Game Boy Competition 2021](https://itch.io/jam/gbcompo21/)
