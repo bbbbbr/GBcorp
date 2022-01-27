@@ -943,6 +943,10 @@ void main(){
 //Params ()
 void initGame(){
 
+    // Wait 4 frames
+    // For PAL SNES this delay is required on startup
+    for (uint8_t i = 4; i != 0; i--) wait_vbl_done();
+
 	//Shut down screen while init
 	DISPLAY_OFF;
 
